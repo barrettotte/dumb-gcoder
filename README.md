@@ -1,10 +1,12 @@
-# dumb-cat-toys
+# dumb-gcode
 
-Some dumb 3D printed toys my little creature seems to love.
+A dumb GCODE generator made to learn GCODE and 3D print my cat some 
+shapes it loves to play with.
 
-I also wanted to learn the basics of GCODE and slicers.
-This is a dumb project so my little script is only targeting my 
+This is a dumb project so I'm only targeting my 
 [Creality Ender-3 Pro](https://www.creality.com/products/ender-3-pro-3d-printer).
+
+Maybe one day I'll try writing a small slicer.
 
 TODO: picture of cat
 
