@@ -1,6 +1,6 @@
-from dumb_gcode.gcode import GcodeGenerator
-from dumb_gcode.printer import Printer
-from dumb_gcode.shapes import Rectangle, Square
+from dumb_gcoder.gcode import GcodeGenerator
+from dumb_gcoder.printer import Printer
+from dumb_gcoder.shapes import Rectangle, Square
 
 def main():
     bed_size = [220, 220, 50]
