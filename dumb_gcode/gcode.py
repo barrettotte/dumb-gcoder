@@ -1,57 +1,159 @@
+import math
 from typing import Optional
 from .printer import Printer
 from .shapes import Path
 
 class GcodeGenerator():
+    retract_speed = 5000  # TODO: add retract_speed (mm/min) to settings
+    retract_amount = 4.5  # TODO: add retract_amount (mm) to settings
+    default_speed = 1500  # TODO: add default_speed (mm/min) to settings
+    travel_speed = 3000  # TODO: add travel_speed (mm/min) to settings
+    z_start = 0.28
+    bed_temp = 60
+    end_temp = 210
+
     def __init__(self, printer: Printer):
         self.printer = printer
-        self.gcode = []
-
-    def add_gcode(self, cmd: str, comment: Optional[str] = None):
-        comment = '' if not comment else f' ; {comment}'
-        self.gcode.append(cmd + comment)
+        self.src = []           # lines of GCODE source
+        self.extruder = 0.0     # keep track of extruder position (absolute)
+        self.cmd_padding = 38   # used to align comments
     
-    def add_comment(self, comment: str):
-        self.gcode.append(f'; {comment}')
+    def reset(self):
+        self.src = []
+        self.extruder = 0.0
+
+    def gcode(self, cmd: str, comment: Optional[str] = None):
+        self.src.append(cmd.ljust(self.cmd_padding) + ' ; ' + ('' if not comment else f'{comment}'))
+
+    def line_comment(self, comment: str, aligned: bool = False):
+        self.src.append(f"{(' ' * (self.cmd_padding+1)) if aligned else ''}; {comment}")
+
+    def retract_end(self):
+        self.extruder -= self.retract_amount
+        self.gcode(f"G1 E{self.extruder:.5f} F{self.retract_speed}", "retract extruder")
+
+    def restore_end(self):
+        self.extruder += self.retract_amount
+        self.gcode(f"G1 E{self.extruder:.5f} F{self.retract_speed}", "restore extruder position")
+
+    def move(self, p: list[float], comment: Optional[str] = None):
+        self.retract_end()
+        x,y,z = f'{p[0]:.3f}', f'{p[1]:.3f}', f'{(p[2] + self.z_start):.3f}'
+        default_comment = f"move to ({x},{y},{z})"
+        self.gcode(f"G1 X{x} Y{y} Z{z} F{self.travel_speed}", default_comment if not comment else comment)
+        self.restore_end()
+    
+    def extrude(self, a: list[float], b: list[float], thickness: Optional[int] = None, comment: Optional[str] = None):
+        length = (self.printer.extruded_section * math.dist(a, b)) / self.printer.filament_section
+        self.extruder += (length * (1 if not thickness else thickness))
+        x,y,z = f'{b[0]:.3f}', f'{b[1]:.3f}', f'{(b[2] + self.z_start):.3f}'
+        default_comment = f"extrude to ({x},{y},{z})"
+        self.gcode(f"G1 X{x} Y{y} Z{z} E{self.extruder:.5f}", default_comment if not comment else comment)
+
+    def set_speed(self, f: int):
+        self.gcode(f"G1 F{f}", "set speed")
+    
+    def set_bed_temp(self, t: int):
+        self.gcode(f"M140 S{t}", "set bed temperature")
+    
+    def set_end_temp(self, t: int):
+        self.gcode(f"M104 S{t}", "set hotend temperature")
+    
+    def set_positioning(self, relative: bool):
+        if relative:
+            self.gcode("G91", "relative mode")
+        else:
+            self.gcode("G90", "absolute mode")
+    
+    def set_fan(self, enable: bool):
+        if enable:
+            self.gcode("M106", "enable fan")
+        else:
+            self.gcode("M107", "disable fan")
 
     def add_prologue(self):
-        self.add_comment("BEGIN prologue")
-        # temperature set?
-        # enable fans?
-        self.add_gcode("G91", "relative mode")
-        self.add_gcode("G1 Z1", "up 1mm")
-        self.add_gcode("G28 X0 Y0", "home XY")
-        self.add_gcode("G90", "absolute mode")
-        self.add_gcode(f"G1 X{self.printer.bed_center[0]} Y{self.printer.bed_center[1]} F8000", "goto center")
-        self.add_gcode("T0", "select extruder 1")
-        self.add_gcode("G92 E0", "reset extruder position")
-        self.add_comment("END prologue\n")
+        self.line_comment("BEGIN prologue")
+        self.gcode("M201 X500 Y500 Z100 E5000", "set max accelerations (mm/s^2))")
+        self.gcode("M203 X500 Y500 Z10 E60", "set max feedrate (mm/s)")
+        self.gcode("M204 P500 R1000 T500", "set P, T, and retract acceleration (mm/s^2)")
+        self.gcode("M205 X8.00 Y8.00 Z0.40 E5.00", "set jerk limits (mm/s)")
+        self.gcode("M205 S0 T0", "set min extrude and travel feed rate (mm/s)")
+        
+        self.set_fan(False)
+        self.set_end_temp(self.end_temp)
+        self.set_bed_temp(self.bed_temp)
+        self.gcode(f"M190 S{self.bed_temp}", "wait for bed temperature")
+        self.gcode(f"M109 S{self.end_temp}", "wait for hotend temperature")
 
-    def add_epilogue(self):
-        self.add_comment("BEGIN epilogue")
-        self.add_gcode("G91", "relative mode")
-        self.add_gcode("G1 E-4 F3000", "retract filament")
-        self.add_gcode(f"G1 X0 Y{self.printer.max_y}", "position for print removal")
-        self.add_gcode("G1 E4", "restore filament position")
-        self.add_gcode("M 107", "turn off fans")
-        self.add_comment("END epilogue\n")
+        self.set_fan(False)
+        self.gcode("M83", "relative extrusion mode")
+        self.set_positioning(False)
+        self.gcode("G28", "home XYZ")
+        self.gcode(f"G1 Z{self.z_start}", "avoid scratching bed with hotend")
 
-    def add_settings(self):
-        self.add_comment("BEGIN settings")
-        self.add_comment(f"bed_size = ({self.printer.max_x}mm, {self.printer.max_y}mm, {self.printer.max_z}mm)")
-        self.add_comment(f"filament_diameter = {self.printer.filament_diameter}mm")
-        self.add_comment(f"layer_height = {self.printer.layer_height}mm")
-        self.add_comment(f"nozzle_diameter = {self.printer.nozzle_diameter}mm")
-        self.add_comment("END settings\n")
+        self.gcode("G1 X2 Y10 F3000", "move to intro line start")
+        self.gcode(f"G1 Z{self.z_start} F240", "avoid scratching bed")
+        self.gcode("G92 E0", "reset extruder position")
+        self.gcode(f"G1 Y{self.printer.bed_size[1] - 30} Z{self.z_start} E15 F1500", "intro line 1")
+        self.gcode(f"G1 X2.3 F5000", "prepare for next intro line")
+        self.gcode("G92 E0", "reset extruder position")
+        self.gcode(f"G1 Y10 E15 F1200", "intro line 2")
+        self.gcode("G92 E0", "reset extruder position")
+
+        self.gcode("G21", "set units to millimeters")
+        self.gcode("M82", "absolute extrusion mode")
+        self.set_fan(False)
+        self.line_comment("END prologue\n")
 
     def add_body(self, paths: list[Path]):
-        self.add_comment("BEGIN body")
+        self.line_comment("BEGIN body")
+        self.restore_end()
+        for path in paths:
+            self.line_comment('new path', aligned=True)
+            self.move(path.vertices[0])
+            layer = int(path.vertices[0][2] / self.printer.layer_height)
+            self.set_speed(self.default_speed)
+            
+            extrusion_multiplier = 3 if layer == 1 else 1  # thicker first layer
+            for i in range(len(path.vertices)-1):
+                a = path.vertices[i]
+                b = path.vertices[i+1]
+                self.extrude(a, b, extrusion_multiplier)
+        self.line_comment("END body\n")
+    
+    def add_epilogue(self):
+        self.line_comment("BEGIN epilogue")
+        self.retract_end()
+        self.move([self.printer.bed_center[0], self.printer.max_y - 10, 25], "move for print removal")
+        self.set_bed_temp(0)
+        self.set_end_temp(0)
+        self.set_fan(False)
+        self.gcode("M84 X Y E", "disable motors")
+        self.line_comment("END epilogue\n")
 
-        self.add_comment("END body\n")
+    def add_settings(self):
+        self.line_comment("BEGIN settings")
+        self.line_comment(f"bed_size = ({self.printer.max_x}, {self.printer.max_y}, {self.printer.max_z})")
+        self.line_comment(f"bed_temp = {self.bed_temp}")
+        self.line_comment(f"default_speed = {self.default_speed}")
+        self.line_comment(f"end_temp = {self.end_temp}")
+        self.line_comment(f"extruder_diameter = {self.printer.extruder_diameter}")
+        self.line_comment(f"filament_diameter = {self.printer.filament_diameter}")
+        self.line_comment(f"layer_height = {self.printer.layer_height}")
+        self.line_comment(f"retract_amount = {self.retract_amount}")
+        self.line_comment(f"retract_speed = {self.retract_speed}")
+        self.line_comment(f"travel_speed = {self.travel_speed}")
+        self.line_comment(f"z_start = {self.z_start}")
+        self.line_comment("END settings\n")
 
-    def generate(self, paths: list[Path]):
+    def generate(self, paths: list[Path], out: Optional[str] = None):
+        self.reset()
         self.add_prologue()
         self.add_body(paths)
         self.add_epilogue()
         self.add_settings()
-        return self.gcode
+
+        if out:
+            with open(out, 'w+') as f:
+                f.write('\n'.join(self.src))
+        return self.src

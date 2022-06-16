@@ -1,5 +1,3 @@
-import math
-from typing import Optional
 from .printer import Printer
 
 class Path():
@@ -18,6 +16,9 @@ class Path():
             sum(v[2] for v in self.vertices) / len(self.vertices),
         ]
 
+    def __repr__(self):
+        return 'Path: [' + ','.join([f'({v[0]:.3f},{v[1]:.3f},{v[2]:.3f})' for v in self.vertices]) + ']'
+
 class ShapeGenerator():
     def __init__(self, printer: Printer):
         self.printer = printer
@@ -26,37 +27,28 @@ class ShapeGenerator():
     def generate(self) -> list[Path]:
         raise NotImplementedError("Inherited Generator classes must implement generate() method")
 
-class Cube(ShapeGenerator):
-    def generate(self, side_length: float, center_x: Optional[float] = None, center_y: Optional[float] = None) -> list[Path]:
-        print("Cube generating...")
+class Rectangle(ShapeGenerator):
+    def generate(self, width: float, length: float, thickness: int) -> list[Path]:
+        cx = self.printer.bed_center[0] - (width/2)
+        cy = self.printer.bed_center[1] - (length/2)
+        z = 0  # only one layer
 
-        center_x = self.printer.bed_center[0] if not center_x else center_x
-        center_y = self.printer.bed_center[1] if not center_y else center_y
-        
-        paths = []
-        total_layers = side_length / self.printer.layer_height
-        angle_inc = (2 * math.pi) / 4.0  # 90
-        z = 0
-        layer = 0
+        for i in range(thickness):
+            p = Path()
+            offset = i * (self.printer.extruder_diameter/2)
+            p.add_point([0 + cx + offset, 0 + cy + offset, z])
+            p.add_point([width + cx - offset, 0 + cy + offset, z])
+            p.add_point([width + cx - offset, length + cy - offset, z])
+            p.add_point([0 + cx + offset, length + cy - offset, z])
+            p.add_point([0 + cx + offset, 0 + cy + offset, z])
+            self.paths.append(p)
+        return self.paths
 
-        while (layer < total_layers):
-            z += self.printer.layer_height
-            paths.append(Path())
-            angle = 0.0
-            while angle < (2 * math.pi):
-                x = center_x + math.cos(angle) * side_length
-                y = center_y + math.sin(angle) * side_length
-                paths[-1].add_point([x,y,z])
-                angle += angle_inc
-            layer += 1
-
-        # return in extrusion order (bottom to top)
-        paths.sort(key=lambda x: x.get_center()[2], reverse=True)
-
-class Square(ShapeGenerator):
-    def generate(self) -> list[Path]:
-        print("Square generating...")
+class Square(Rectangle):
+    def generate(self, length: float, thickness: int) -> list[Path]:
+        return super().generate(length, length, thickness)
 
 class Circle(ShapeGenerator):
     def generate(self) -> list[Path]:
         print("Circle generating...")
+        return self.paths
