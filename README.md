@@ -7,7 +7,9 @@ This is a dumb project so I'm only targeting the specs of my
 
 Maybe one day I'll try writing a small general purpose slicer.
 
-TODO: picture of cat
+![docs/bed.jpg](docs/bed.jpg)
+![docs/cat_1.jpg](docs/cat_1.jpg)
+![docs/cat_2.jpg](docs/cat_2.jpg)
 
 I only made a square and a rectangle. I wanted to make an ellipse/circle, but I lost motivation.
 
