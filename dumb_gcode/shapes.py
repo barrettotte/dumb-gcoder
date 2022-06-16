@@ -29,8 +29,7 @@ class ShapeGenerator():
 
 class Rectangle(ShapeGenerator):
     def generate(self, width: float, length: float, thickness: int) -> list[Path]:
-        cx = self.printer.bed_center[0] - (width/2)
-        cy = self.printer.bed_center[1] - (length/2)
+        cx,cy = (self.printer.bed_center[0] - (width/2)), (self.printer.bed_center[1] - (length/2))
         z = 0  # only one layer
 
         for i in range(thickness):
