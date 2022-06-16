@@ -46,8 +46,3 @@ class Rectangle(ShapeGenerator):
 class Square(Rectangle):
     def generate(self, length: float, thickness: int) -> list[Path]:
         return super().generate(length, length, thickness)
-
-class Circle(ShapeGenerator):
-    def generate(self) -> list[Path]:
-        print("Circle generating...")
-        return self.paths
