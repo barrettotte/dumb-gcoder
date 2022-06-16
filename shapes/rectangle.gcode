@@ -31,7 +31,7 @@ M107                                   ; disable fan
 
 ; BEGIN body
 G1 E0.00000 F5000                      ; restore extruder position
-                                       ; new path
+                                       ; path 1 of 5
 G1 E-4.50000 F5000                     ; retract extruder
 G1 X85.000 Y105.000 Z0.280 F3000       ; move to (85.000,105.000,0.280)
 G1 E0.00000 F5000                      ; restore extruder position
@@ -40,7 +40,7 @@ G1 X135.000 Y105.000 Z0.280 E1.66301   ; extrude to (135.000,105.000,0.280)
 G1 X135.000 Y115.000 Z0.280 E1.99561   ; extrude to (135.000,115.000,0.280)
 G1 X85.000 Y115.000 Z0.280 E3.65861    ; extrude to (85.000,115.000,0.280)
 G1 X85.000 Y105.000 Z0.280 E3.99122    ; extrude to (85.000,105.000,0.280)
-                                       ; new path
+                                       ; path 2 of 5
 G1 E-0.50878 F5000                     ; retract extruder
 G1 X85.200 Y105.200 Z0.280 F3000       ; move to (85.200,105.200,0.280)
 G1 E3.99122 F5000                      ; restore extruder position
@@ -49,7 +49,7 @@ G1 X134.800 Y105.200 Z0.280 E5.64092   ; extrude to (134.800,105.200,0.280)
 G1 X134.800 Y114.800 Z0.280 E5.96022   ; extrude to (134.800,114.800,0.280)
 G1 X85.200 Y114.800 Z0.280 E7.60992    ; extrude to (85.200,114.800,0.280)
 G1 X85.200 Y105.200 Z0.280 E7.92922    ; extrude to (85.200,105.200,0.280)
-                                       ; new path
+                                       ; path 3 of 5
 G1 E3.42922 F5000                      ; retract extruder
 G1 X85.400 Y105.400 Z0.280 F3000       ; move to (85.400,105.400,0.280)
 G1 E7.92922 F5000                      ; restore extruder position
@@ -58,7 +58,7 @@ G1 X134.600 Y105.400 Z0.280 E9.56561   ; extrude to (134.600,105.400,0.280)
 G1 X134.600 Y114.600 Z0.280 E9.87161   ; extrude to (134.600,114.600,0.280)
 G1 X85.400 Y114.600 Z0.280 E11.50801   ; extrude to (85.400,114.600,0.280)
 G1 X85.400 Y105.400 Z0.280 E11.81400   ; extrude to (85.400,105.400,0.280)
-                                       ; new path
+                                       ; path 4 of 5
 G1 E7.31400 F5000                      ; retract extruder
 G1 X85.600 Y105.600 Z0.280 F3000       ; move to (85.600,105.600,0.280)
 G1 E11.81400 F5000                     ; restore extruder position
@@ -67,7 +67,7 @@ G1 X134.400 Y105.600 Z0.280 E13.43709  ; extrude to (134.400,105.600,0.280)
 G1 X134.400 Y114.400 Z0.280 E13.72978  ; extrude to (134.400,114.400,0.280)
 G1 X85.600 Y114.400 Z0.280 E15.35288   ; extrude to (85.600,114.400,0.280)
 G1 X85.600 Y105.600 Z0.280 E15.64557   ; extrude to (85.600,105.600,0.280)
-                                       ; new path
+                                       ; path 5 of 5
 G1 E11.14557 F5000                     ; retract extruder
 G1 X85.800 Y105.800 Z0.280 F3000       ; move to (85.800,105.800,0.280)
 G1 E15.64557 F5000                     ; restore extruder position

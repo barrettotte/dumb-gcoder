@@ -102,16 +102,17 @@ class GcodeGenerator():
     def add_body(self, paths: list[Path]):
         self.line_comment("BEGIN body")
         self.restore_end()
-        for path in paths:
-            self.line_comment('new path', aligned=True)
-            self.move(path.vertices[0])
-            layer = int(path.vertices[0][2] / self.printer.layer_height)
+        for i in range(len(paths)):
+            self.line_comment(f'path {i+1} of {len(paths)}', aligned=True)
+            self.move(paths[i].vertices[0])
             self.set_speed(self.printer.default_speed)
             
+            layer = int(paths[i].vertices[0][2] / self.printer.layer_height)
             extrusion_multiplier = 3 if layer == 1 else 1  # thicker first layer
-            for i in range(len(path.vertices)-1):
-                a = path.vertices[i]
-                b = path.vertices[i+1]
+
+            for j in range(len(paths[i].vertices)-1):
+                a = paths[i].vertices[j]
+                b = paths[i].vertices[j+1]
                 self.extrude(a, b, extrusion_multiplier)
         self.line_comment("END body\n")
     

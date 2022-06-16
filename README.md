@@ -10,8 +10,13 @@ Maybe one day I'll try writing a small general purpose slicer.
 TODO: picture of cat
 
 I only made a square, rectangle, circle, and ellipse.
-I also wanted to make an n-gon as a list of coordinates, but just lost motivation to do so.
+
+TODO: example script (cat_toys.py)
 
 ## References
 
 - [Marlin GCODE Reference](https://marlinfw.org/meta/gcode/)
+- [PrusaSlicer G-code viewer](https://help.prusa3d.com/article/prusaslicer-g-code-viewer_193152)
+- Sample GCODE
+  - [slicer_examples/square_test_cura.gcode](slicer_examples/square_test_cura.gcode)
+  - [slicer_examples/square_test_prusa.gcode](slicer_examples/square_test_prusa.gcode)
