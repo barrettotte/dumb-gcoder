@@ -4,14 +4,6 @@ from .printer import Printer
 from .shapes import Path
 
 class GcodeGenerator():
-    retract_speed = 5000  # TODO: add retract_speed (mm/min) to settings
-    retract_amount = 4.5  # TODO: add retract_amount (mm) to settings
-    default_speed = 1500  # TODO: add default_speed (mm/min) to settings
-    travel_speed = 3000  # TODO: add travel_speed (mm/min) to settings
-    z_start = 0.28
-    bed_temp = 60
-    end_temp = 210
-
     def __init__(self, printer: Printer):
         self.printer = printer
         self.src = []           # lines of GCODE source
@@ -29,24 +21,24 @@ class GcodeGenerator():
         self.src.append(f"{(' ' * (self.cmd_padding+1)) if aligned else ''}; {comment}")
 
     def retract_end(self):
-        self.extruder -= self.retract_amount
-        self.gcode(f"G1 E{self.extruder:.5f} F{self.retract_speed}", "retract extruder")
+        self.extruder -= self.printer.retract_amount
+        self.gcode(f"G1 E{self.extruder:.5f} F{self.printer.retract_speed}", "retract extruder")
 
     def restore_end(self):
-        self.extruder += self.retract_amount
-        self.gcode(f"G1 E{self.extruder:.5f} F{self.retract_speed}", "restore extruder position")
+        self.extruder += self.printer.retract_amount
+        self.gcode(f"G1 E{self.extruder:.5f} F{self.printer.retract_speed}", "restore extruder position")
 
     def move(self, p: list[float], comment: Optional[str] = None):
         self.retract_end()
-        x,y,z = f'{p[0]:.3f}', f'{p[1]:.3f}', f'{(p[2] + self.z_start):.3f}'
+        x,y,z = f'{p[0]:.3f}', f'{p[1]:.3f}', f'{(p[2] + self.printer.z_start):.3f}'
         default_comment = f"move to ({x},{y},{z})"
-        self.gcode(f"G1 X{x} Y{y} Z{z} F{self.travel_speed}", default_comment if not comment else comment)
+        self.gcode(f"G1 X{x} Y{y} Z{z} F{self.printer.travel_speed}", default_comment if not comment else comment)
         self.restore_end()
     
     def extrude(self, a: list[float], b: list[float], thickness: Optional[int] = None, comment: Optional[str] = None):
         length = (self.printer.extruded_section * math.dist(a, b)) / self.printer.filament_section
         self.extruder += (length * (1 if not thickness else thickness))
-        x,y,z = f'{b[0]:.3f}', f'{b[1]:.3f}', f'{(b[2] + self.z_start):.3f}'
+        x,y,z = f'{b[0]:.3f}', f'{b[1]:.3f}', f'{(b[2] + self.printer.z_start):.3f}'
         default_comment = f"extrude to ({x},{y},{z})"
         self.gcode(f"G1 X{x} Y{y} Z{z} E{self.extruder:.5f}", default_comment if not comment else comment)
 
@@ -80,10 +72,10 @@ class GcodeGenerator():
         self.gcode("M205 S0 T0", "set min extrude and travel feed rate (mm/s)")
         
         self.set_fan(False)
-        self.set_end_temp(self.end_temp)
-        self.set_bed_temp(self.bed_temp)
-        self.gcode(f"M190 S{self.bed_temp}", "wait for bed temperature")
-        self.gcode(f"M109 S{self.end_temp}", "wait for hotend temperature")
+        self.set_end_temp(self.printer.end_temp)
+        self.set_bed_temp(self.printer.bed_temp)
+        self.gcode(f"M190 S{self.printer.bed_temp}", "wait for bed temperature")
+        self.gcode(f"M109 S{self.printer.end_temp}", "wait for hotend temperature")
 
         self.set_fan(False)
         self.set_positioning(False)
@@ -91,13 +83,13 @@ class GcodeGenerator():
         self.gcode("G28", "home XYZ")
 
         self.gcode(f"G1 Z2 F3000", "avoid scratching bed")
-        self.gcode(f"G1 X2 Y10 Z{self.z_start} F3000", "move to intro line start")
-        self.gcode(f"G1 Y{self.printer.bed_size[1] - 30} Z{self.z_start} E15 F1500", "intro line 1")
-        self.gcode(f"G1 X2.3 Z{self.z_start} F5000", "prepare for next intro line")
-        self.gcode(f"G1 Y10 Z{self.z_start} E30 F1200", "intro line 2")
+        self.gcode(f"G1 X2 Y10 Z{self.printer.z_start} F3000", "move to intro line start")
+        self.gcode(f"G1 Y{self.printer.bed_size[1] - 30} Z{self.printer.z_start} E15 F1500", "intro line 1")
+        self.gcode(f"G1 X2.3 Z{self.printer.z_start} F5000", "prepare for next intro line")
+        self.gcode(f"G1 Y10 Z{self.printer.z_start} E30 F1200", "intro line 2")
         self.gcode("G92 E0", "reset extruder")
         self.gcode("G1 Z2 F3000", "avoid scratching bed")
-        self.gcode(f"G1 X5 Y20 Z{self.z_start} F5000", "prevent blob squish")
+        self.gcode(f"G1 X5 Y20 Z{self.printer.z_start} F5000", "prevent blob squish")
         self.gcode("G92 E0", "reset extruder")
         self.gcode("G92 E0", "reset extruder")
         self.retract_end()
@@ -114,7 +106,7 @@ class GcodeGenerator():
             self.line_comment('new path', aligned=True)
             self.move(path.vertices[0])
             layer = int(path.vertices[0][2] / self.printer.layer_height)
-            self.set_speed(self.default_speed)
+            self.set_speed(self.printer.default_speed)
             
             extrusion_multiplier = 3 if layer == 1 else 1  # thicker first layer
             for i in range(len(path.vertices)-1):
@@ -136,16 +128,16 @@ class GcodeGenerator():
     def add_settings(self):
         self.line_comment("BEGIN settings")
         self.line_comment(f"bed_size = ({self.printer.max_x}, {self.printer.max_y}, {self.printer.max_z})")
-        self.line_comment(f"bed_temp = {self.bed_temp}")
-        self.line_comment(f"default_speed = {self.default_speed}")
-        self.line_comment(f"end_temp = {self.end_temp}")
+        self.line_comment(f"bed_temp = {self.printer.bed_temp}")
+        self.line_comment(f"default_speed = {self.printer.default_speed}")
+        self.line_comment(f"end_temp = {self.printer.end_temp}")
         self.line_comment(f"extruder_diameter = {self.printer.extruder_diameter}")
         self.line_comment(f"filament_diameter = {self.printer.filament_diameter}")
         self.line_comment(f"layer_height = {self.printer.layer_height}")
-        self.line_comment(f"retract_amount = {self.retract_amount}")
-        self.line_comment(f"retract_speed = {self.retract_speed}")
-        self.line_comment(f"travel_speed = {self.travel_speed}")
-        self.line_comment(f"z_start = {self.z_start}")
+        self.line_comment(f"retract_amount = {self.printer.retract_amount}")
+        self.line_comment(f"retract_speed = {self.printer.retract_speed}")
+        self.line_comment(f"travel_speed = {self.printer.travel_speed}")
+        self.line_comment(f"z_start = {self.printer.z_start}")
         self.line_comment("END settings\n")
 
     def generate(self, paths: list[Path], out: Optional[str] = None):
